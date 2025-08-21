@@ -4,6 +4,28 @@
 
 @section('content')
     <div class="container mx-auto px-4 py-8">
+        <!-- resources/views/quizzes/show.blade.php -->
+        @if(auth()->check() && auth()->user()->id !== $quiz->admin_id)
+            <div class="mt-8 text-center">
+                <form action="{{ route('quizzes.attempts.start', $quiz) }}" method="POST">
+                    @csrf
+                    <button type="submit"
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-lg">
+                        <i class="fas fa-play mr-2"></i> Start Quiz
+                    </button>
+                </form>
+
+                @if($activeAttempt = auth()->user()->attempts()->where('quiz_id', $quiz->id)->whereNull('completed_at')->first())
+                    <div class="mt-4 text-sm text-gray-600">
+                        You have an ongoing attempt.
+                        <a href="{{ route('quizzes.attempts.show', [$quiz, $activeAttempt]) }}"
+                            class="text-blue-600 hover:text-blue-800 font-medium">
+                            Continue Attempt
+                        </a>
+                    </div>
+                @endif
+            </div>
+        @endif
         <div class="max-w-4xl mx-auto">
             <div class="flex justify-between items-start mb-6">
                 <div>
@@ -11,20 +33,22 @@
                     <p class="text-gray-600 mt-2">{{ $quiz->description }}</p>
                 </div>
                 <div class="flex space-x-3">
-                    @can('update', $quiz)
-                        <a href="{{ route('quizzes.edit', $quiz) }}"
-                            class="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition">
-                            Edit
-                        </a>
-                        <form action="{{ route('quizzes.toggle-publish', $quiz) }}" method="POST">
-                            @csrf
-                            @method('PATCH')
-                            <button type="submit"
-                                class="px-3 py-1 {{ $quiz->is_published ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800' }} rounded hover:opacity-90 transition">
-                                {{ $quiz->is_published ? 'Unpublish' : 'Publish' }}
-                            </button>
-                        </form>
-                    @endcan
+                    @if ($role!='admin' || $role!='teacher')
+                        @can('update', $quiz)
+                            <a href="{{ route('quizzes.edit', $quiz) }}"
+                                class="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition">
+                                Edit
+                            </a>
+                            <form action="{{ route('quizzes.toggle-publish', $quiz) }}" method="POST">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit"
+                                    class="px-3 py-1 {{ $quiz->is_published ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800' }} rounded hover:opacity-90 transition">
+                                    {{ $quiz->is_published ? 'Unpublish' : 'Publish' }}
+                                </button>
+                            </form>
+                        @endcan
+                    @endif
                 </div>
             </div>
 
@@ -71,12 +95,14 @@
                                         <h3 class="font-medium">{{ $question->text }}</h3>
                                         <p class="text-sm text-gray-500 mt-1">{{ $question->options->count() }} options</p>
                                     </div>
-                                    <div class="flex space-x-2">
-                                        <a href="{{ route('questions.edit', [$quiz, $question]) }}"
-                                            class="text-blue-600 hover:text-blue-800">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                    </div>
+                                    @if ($role == 'admin' || $role == 'teacher')
+                                        <div class="flex space-x-2">
+                                            <a href="{{ route('questions.edit', [$quiz, $question]) }}"
+                                                class="text-blue-600 hover:text-blue-800">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>                                    
+                                    @endif
                                 </div>
                             </div>
                         @empty
@@ -122,7 +148,7 @@
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span
                                                     class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                    {{ $attempt->score >= 70 ? 'bg-green-100 text-green-800' : ($attempt->score >= 50 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800') }}">
+                                                                {{ $attempt->score >= 70 ? 'bg-green-100 text-green-800' : ($attempt->score >= 50 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800') }}">
                                                     {{ $attempt->score }}%
                                                 </span>
                                             </td>

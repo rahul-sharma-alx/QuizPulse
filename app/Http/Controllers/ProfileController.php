@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attempts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -10,8 +11,40 @@ class ProfileController extends Controller
 {
     public function show()
     {
+        $user = Auth::user()->loadCount(['attempts']);
+        
+        // Calculate activity metrics
+        $metrics = [
+            'quiz_count' => $user->attempts_count,
+            'avg_score' => Attempts::where('user_id', $user->id)
+                ->whereNotNull('completed_at')
+                ->avg('score') ?? 0,
+            'last_activity' => $user->last_login_at 
+                ? $user->last_login_at->diffForHumans() 
+                : 'No recent activity',
+            'member_since' => $user->created_at->format('M d, Y'),
+        ];
+        
+        // Get recent quiz attempts (last 5)
+        $recentAttempts = Attempts::with('quiz')
+            ->where('user_id', $user->id)
+            ->whereNotNull('completed_at')
+            ->latest('completed_at')
+            ->take(5)
+            ->get()
+            ->map(function ($attempt) {
+                return [
+                    'quiz_title' => $attempt->quiz->title,
+                    'score' => $attempt->score,
+                    'completed_at' => $attempt->completed_at->format('M d, Y \a\t h:i A'),
+                    'result_url' => route('quizzes.results', [$attempt->quiz, $attempt]),
+                ];
+            });
+        
         return view('profile.show', [
-            'user' => Auth::user()
+            'user' => $user,
+            'metrics' => $metrics,
+            'recentAttempts' => $recentAttempts,
         ]);
     }
 
@@ -51,7 +84,7 @@ class ProfileController extends Controller
         }
         
         // Store new avatar
-        $path = $request->file('avatar')->store('avatars');
+        $path = $request->file('avatar')->store('storage/avatars');
         
         $user->update([
             'avatar_path' => $path,

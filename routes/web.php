@@ -6,6 +6,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\ResultController;
 use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\QuizAttemptController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -29,10 +30,21 @@ Route::middleware(['auth'])->group(function ()  {
     Route::get('/quizzes/{quiz}/edit', [QuizController::class, 'edit'])->name('quizzes.edit');
     Route::put('/quizzes/{quiz}', [QuizController::class, 'update'])->name('quizzes.update');
     Route::delete('/quizzes/{quiz}', [QuizController::class, 'destroy'])->name('quizzes.destroy');
-    Route::patch('/quizzes/{quiz}/toggle-publish', [QuizController::class, 'togglePublish'])->name('quizzes.toggle-publish');
+    Route::patch('/quizzes/{quiz}/toggle-publish', action: [QuizController::class, 'togglePublish'])->name('quizzes.toggle-publish');
+
+    // Start new quiz attempt
+    Route::post('/quizzes/{quiz}/attempts', [QuizAttemptController::class, 'start'])->name('quizzes.attempts.start');
+    
+    // Show quiz attempt page
+    Route::get('/quizzes/{quiz}/attempts/{attempt}', [QuizAttemptController::class, 'show'])->name('quizzes.attempts.show');
+    
+    // Submit quiz attempt
+    Route::post('/quizzes/{quiz}/attempts/{attempt}/submit', [QuizAttemptController::class, 'submit'])->name('quizzes.attempts.submit');
 
     // Results
     Route::get('/results', [ResultController::class, 'index'])->name('results.index');
+    Route::get('/quizzes/{quiz}/results/{attempt}', [ResultController::class, 'show'])
+    ->name('quizzes.results');
 
     // Questions
     Route::get('/quizzes/{quiz}/questions/create', [QuestionController::class, 'create'])->name('questions.create');
